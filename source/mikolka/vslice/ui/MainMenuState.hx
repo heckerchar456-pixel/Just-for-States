@@ -87,11 +87,7 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		super.create();
-		#if TOUCH_CONTROLS_ALLOWED
-		if (controls.mobileC)
-			new mobile.states.MobileMenuState(this);
-		else
-		#end
+		// Menu personalizado: se usa siempre (PC y celular)
 		new DesktopMenuState(this);
 		
 	}
