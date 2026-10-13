@@ -77,14 +77,36 @@ jobs:
 
       - name: Configure Android
         if: inputs.exportPath == 'android'
-        env:
-          PLAYSTORE_FIREBASE: ${{ secrets.PLAYSTORE_FIREBASE }}
         run: |
           haxelib run lime config ANDROID_SDK $ANDROID_HOME
           haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
-          printf '%s' "$PLAYSTORE_FIREBASE" > ./setup/google-services.json
+          # Fork sin secretos de Firebase: se genera un google-services.json de relleno valido
+          PKG=$(grep -oP 'package="\K[^"]+' Project.xml | head -1)
+          echo "Package detectado: $PKG"
+          if [ -z "$PKG" ]; then echo "No se encontro package en Project.xml"; exit 1; fi
+          cat > ./setup/google-services.json <<JSON
+          {
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "dummy-project",
+              "storage_bucket": "dummy-project.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789012:android:0123456789abcdef",
+                  "android_client_info": { "package_name": "$PKG" }
+                },
+                "oauth_client": [],
+                "api_key": [ { "current_key": "AIzaSyDummyDummyDummyDummyDummyDummy000" } ],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
 
       - name: Configure iOS
         if: inputs.name == 'iOS'
@@ -94,33 +116,24 @@ jobs:
 
       - name: Compile
         run: haxelib run lime build ${{ inputs.buildArgs }}
-          # setup/google-services.json
-
-      - name: Upload debugging symbols (Android)
-        if: inputs.exportPath == 'android' 
-        run: sh ./setup/firebase_spell.sh
 
       - name: Upload debugging symbols (iOS)
         if: inputs.name == 'iOS'
         run: sh ./setup/firebase_ios.sh
 
-      - name: Sign APK with the proper key
+      - name: Sign APK with a generated key
         if: inputs.exportPath == 'android'
         env:
           OUT_DIR: ./export/release/android/bin/app/build/outputs/apk/release/
-          SIGNING_KEY: ${{ secrets.MIKOLKA_PASSWORD }}
-          SIGNING_ALIAS: pslice
-          SIGNING_FILE: ${{ secrets.MIKOLKA_KEYSTORE }}
         run: |
-          rm -f ./key.keystore;
-          echo $SIGNING_FILE | base64 -d > ./key.keystore;
-          sha256sum ./key.keystore;
+          rm -f ./key.keystore
+          keytool -genkeypair -keystore ./key.keystore -alias pslice -keyalg RSA -keysize 2048 -validity 10000 -storepass pslice123 -keypass pslice123 -dname "CN=PSlice Custom"
 
-          mv '${{env.OUT_DIR}}PSliceEngine-release.apk' '${{env.OUT_DIR}}PSliceEngine-unsigned.apk';
-          $ANDROID_HOME/build-tools/35.0.1/zipalign -P 16 -f -v 4 '${{env.OUT_DIR}}PSliceEngine-unsigned.apk' '${{env.OUT_DIR}}PSliceEngine-release.apk' > /dev/null;
+          mv '${{env.OUT_DIR}}PSliceEngine-release.apk' '${{env.OUT_DIR}}PSliceEngine-unsigned.apk'
+          $ANDROID_HOME/build-tools/35.0.1/zipalign -P 16 -f -v 4 '${{env.OUT_DIR}}PSliceEngine-unsigned.apk' '${{env.OUT_DIR}}PSliceEngine-release.apk' > /dev/null
 
-          $ANDROID_HOME/build-tools/35.0.1/apksigner sign --ks key.keystore --ks-key-alias $SIGNING_ALIAS --ks-pass "env:SIGNING_KEY" --key-pass "env:SIGNING_KEY" '${{env.OUT_DIR}}PSliceEngine-release.apk';
-          rm '${{env.OUT_DIR}}PSliceEngine-unsigned.apk';
+          $ANDROID_HOME/build-tools/35.0.1/apksigner sign --ks key.keystore --ks-key-alias pslice --ks-pass pass:pslice123 --key-pass pass:pslice123 '${{env.OUT_DIR}}PSliceEngine-release.apk'
+          rm '${{env.OUT_DIR}}PSliceEngine-unsigned.apk'
 
       - name: Make IPA
         if: inputs.name == 'iOS'
