@@ -41,7 +41,7 @@ class MainMenuState extends MusicBeatState
 	var menuCharAtlas:String = 'menucharacters/dokitogetheralt';
 	var menuCharPrefix:String = 'Doki together club';
 	var menuFont:String = 'vcr.ttf'; // cambia por riffic.ttf si lo agregas a assets/fonts
-	var bpm:Float = 120; // BPM de freakyMenu (120 = el de DDTO; usa 102 si dejas el de P-Slice)
+	var menuBpm:Float = 120; // BPM de freakyMenu (120 = el de DDTO; usa 102 si dejas el de P-Slice)
 
 	var curSelected:Int = 0;
 	var menuItems:FlxTypedGroup<FlxText>;
@@ -61,7 +61,7 @@ class MainMenuState extends MusicBeatState
 
 	var acceptInput:Bool = true;
 	var selectedSomethin:Bool = false;
-	var lastBeat:Int = -1;
+	var lastMenuBeat:Int = -1;
 
 	var backdrop:FlxBackdrop;
 	var logo:FlxSprite;
@@ -225,7 +225,7 @@ class MainMenuState extends MusicBeatState
 		if (FlxG.sound.music != null && FlxG.sound.music.volume < 0.8)
 			FlxG.sound.music.volume += 0.5 * elapsed;
 
-		updateBeat();
+		menuBeatCheck();
 
 		if (!selectedSomethin && acceptInput)
 		{
@@ -268,20 +268,20 @@ class MainMenuState extends MusicBeatState
 		super.update(elapsed);
 	}
 
-	function updateBeat()
+	function menuBeatCheck()
 	{
 		if (FlxG.sound.music == null || !FlxG.sound.music.playing)
 			return;
-		var crochet:Float = 60000 / bpm;
+		var crochet:Float = 60000 / menuBpm;
 		var beat:Int = Math.floor(FlxG.sound.music.time / crochet);
-		if (beat != lastBeat)
+		if (beat != lastMenuBeat)
 		{
-			lastBeat = beat;
-			onBeat(beat);
+			lastMenuBeat = beat;
+			menuBeatHit(beat);
 		}
 	}
 
-	function onBeat(beat:Int)
+	function menuBeatHit(beat:Int)
 	{
 		if (logoBl != null)
 			logoBl.animation.play('bump', true);
