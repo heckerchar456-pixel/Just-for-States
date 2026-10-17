@@ -12,8 +12,8 @@ class DokiTitleState extends MusicBeatState
 {
 	public static var initialized:Bool = false;
 
-	var bpm:Float = 120; // BPM de freakyMenu (120 = el de DDTO)
-	var lastBeat:Int = -1;
+	var menuBpm:Float = 120; // BPM de freakyMenu (120 = el de DDTO)
+	var lastMenuBeat:Int = -1;
 
 	var blackScreen:FlxSprite;
 	var credGroup:FlxGroup;
@@ -31,7 +31,7 @@ class DokiTitleState extends MusicBeatState
 	var danceLeft:Bool = false;
 
 	var curWacky:Array<String> = [];
-	var transitioning:Bool = false;
+	var isLeaving:Bool = false;
 	var skippedIntro:Bool = false;
 
 	override function create()
@@ -189,12 +189,12 @@ class DokiTitleState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
-		updateBeat();
+		menuBeatCheck();
 
 		// Enter, clic o toque en pantalla
 		var pressedEnter:Bool = controls.ACCEPT || FlxG.mouse.justPressed;
 
-		if (pressedEnter && !transitioning && skippedIntro)
+		if (pressedEnter && !isLeaving && skippedIntro)
 		{
 			if (VsliceOptions.FLASHBANG)
 			{
@@ -203,7 +203,7 @@ class DokiTitleState extends MusicBeatState
 			}
 			FlxG.sound.play(Paths.sound('confirmMenu'), 0.7);
 
-			transitioning = true;
+			isLeaving = true;
 
 			new FlxTimer().start(2, function(tmr:FlxTimer)
 			{
@@ -217,21 +217,21 @@ class DokiTitleState extends MusicBeatState
 		super.update(elapsed);
 	}
 
-	function updateBeat()
+	function menuBeatCheck()
 	{
 		if (FlxG.sound.music == null || !FlxG.sound.music.playing)
 			return;
-		var crochet:Float = 60000 / bpm;
+		var crochet:Float = 60000 / menuBpm;
 		var beat:Int = Math.floor(FlxG.sound.music.time / crochet);
-		if (beat != lastBeat)
+		if (beat != lastMenuBeat)
 		{
 			// si hubo lag y se saltaron beats, se procesan los que faltaron
-			var from:Int = (lastBeat < 0) ? beat : lastBeat + 1;
+			var from:Int = (lastMenuBeat < 0) ? beat : lastMenuBeat + 1;
 			if (beat - from > 4)
 				from = beat;
 			for (b in from...(beat + 1))
-				onBeat(b);
-			lastBeat = beat;
+				menuBeatHit(b);
+			lastMenuBeat = beat;
 		}
 	}
 
@@ -263,7 +263,7 @@ class DokiTitleState extends MusicBeatState
 		}
 	}
 
-	function onBeat(curBeat:Int)
+	function menuBeatHit(b:Int)
 	{
 		logoBl.animation.play('bump', true);
 		danceLeft = !danceLeft;
@@ -276,7 +276,7 @@ class DokiTitleState extends MusicBeatState
 		if (skippedIntro)
 			return;
 
-		switch (curBeat)
+		switch (b)
 		{
 			case 1:
 				createCoolText(['Team TBD']);
